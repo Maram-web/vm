@@ -12,7 +12,7 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/Maram-web/vm.git'
+                git branch: 'vm', url: 'https://github.com/Maram-web/vm.git'
             }
         }
 
