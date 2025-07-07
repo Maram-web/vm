@@ -1,0 +1,9 @@
+server:
+  port: 8085
+spring:
+  application:
+    name: vm-service
+eureka:
+  client:
+    service-url:
+      defaultZone: http://discovery-service.discovery.svc.cluster.local:8761/eureka/

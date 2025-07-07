@@ -1,0 +1,58 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: vm
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vm-service
+  namespace: vm
+  labels:
+    app: vm-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vm-service
+  template:
+    metadata:
+      labels:
+        app: vm-service
+    spec:
+      containers:
+        - name: vm-service
+          image: marammanai/vm-service:__IMAGE_TAG__
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8082
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: k8s
+          readinessProbe:
+            httpGet:
+              path: /api/vm/actuator/health
+              port: 8082
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /api/vm/actuator/health
+              port: 8082
+            initialDelaySeconds: 30
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vm-service
+  namespace: vm
+spec:
+  type: NodePort
+  selector:
+    app: vm-service
+  ports:
+    - name: http
+      port: 8082
+      targetPort: 8082
+      nodePort: 30092  # ✅ Choisis un NodePort libre
