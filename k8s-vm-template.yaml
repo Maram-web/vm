@@ -22,7 +22,7 @@ spec:
     spec:
       containers:
         - name: vm-service
-          image: marammanai/vm-service:__IMAGE_TAG__
+          image: marammanai/vm-service:__IMAGE_TAG__   # remplace __IMAGE_TAG__ par ta vraie version ex: v1
           imagePullPolicy: Always
           ports:
             - containerPort: 8082
@@ -31,13 +31,13 @@ spec:
               value: k8s
           readinessProbe:
             httpGet:
-              path: /api/vm/actuator/health
+              path: /actuator/health
               port: 8082
             initialDelaySeconds: 10
             periodSeconds: 5
           livenessProbe:
             httpGet:
-              path: /api/vm/actuator/health
+              path: /actuator/health
               port: 8082
             initialDelaySeconds: 30
             periodSeconds: 10
@@ -55,4 +55,4 @@ spec:
     - name: http
       port: 8082
       targetPort: 8082
-      nodePort: 30092  # ✅ Choisis un NodePort libre
+      nodePort: 30092  # NodePort accessible via 192.168.194.128:30092
