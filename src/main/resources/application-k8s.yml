@@ -8,10 +8,11 @@ spring:
     allow-bean-definition-overriding: true
 
   datasource:
-    url: jdbc:mysql://mysql-service.default.svc.cluster.local:3306/vmdb
+    url: jdbc:mysql://mysql.user.svc.cluster.local:3306/vmdb
     username: root
     password: root
     driver-class-name: com.mysql.cj.jdbc.Driver
+
   jpa:
     hibernate:
       ddl-auto: update
