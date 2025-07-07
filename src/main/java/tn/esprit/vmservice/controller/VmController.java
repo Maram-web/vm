@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import tn.esprit.vmservice.dto.VmRequest;
-import tn.esprit.vmservice.service.VmService;
+import tn.esprit.vmservice.services.VmService;
 
 @RestController
 @RequestMapping("/api/vm")
