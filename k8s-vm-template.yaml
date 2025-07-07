@@ -28,19 +28,19 @@ spec:
             - containerPort: 8082
           env:
             - name: SPRING_PROFILES_ACTIVE
-              value: k8s
-          readinessProbe:
-            httpGet:
-              path: /actuator/health
-              port: 8082
-            initialDelaySeconds: 10
-            periodSeconds: 5
-          livenessProbe:
-            httpGet:
-              path: /actuator/health
-              port: 8082
-            initialDelaySeconds: 30
-            periodSeconds: 10
+#              value: k8s
+#          readinessProbe:
+#            httpGet:
+#              path: /actuator/health
+#              port: 8082
+#            initialDelaySeconds: 10
+#            periodSeconds: 5
+#          livenessProbe:
+#            httpGet:
+#              path: /actuator/health
+#              port: 8082
+#            initialDelaySeconds: 30
+#            periodSeconds: 10
 ---
 apiVersion: v1
 kind: Service
