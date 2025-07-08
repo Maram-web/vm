@@ -34,24 +34,32 @@ public class K8sClusterService {
                         .replace("{{CPU}}", getCpuForSize(size))
                         .replace("{{MEMORY}}", getMemoryForSize(size));
 
-                // Chemin du fichier temporaire YAML
+                // Chemin du fichier YAML temporaire
                 Path outputPath = Path.of(tempDir.getAbsolutePath(), clusterName + "-" + role + ".yaml");
                 Files.writeString(outputPath, filledYaml, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
 
                 // Appliquer le fichier avec kubectl
-                Process process = new ProcessBuilder("kubectl", "apply", "-f", outputPath.toString()).start();
-                process.waitFor();
+                Process process = new ProcessBuilder("/usr/bin/kubectl", "apply", "-f", outputPath.toString())
+                        .redirectErrorStream(true)
+                        .start();
+
+                int exitCode = process.waitFor();
+                if (exitCode != 0) {
+                    return "❌ kubectl failed for " + role + " (exit code: " + exitCode + ")";
+                }
             }
 
             return "✅ Cluster K8s créé avec succès pour l'utilisateur " + username;
+
         } catch (Exception e) {
             e.printStackTrace();
             return "❌ Erreur : " + e.getMessage();
         }
     }
 
+    // ✅ Ces méthodes doivent être en dehors de createK8sCluster()
     private String getImageForOs(String osType) {
-        return osType.equalsIgnoreCase("ubuntu") ? "ubuntu:20.04" : "windows:latest"; // à adapter
+        return osType.equalsIgnoreCase("ubuntu") ? "ubuntu:20.04" : "windows:latest"; // à adapter si besoin
     }
 
     private String getCpuForSize(String size) {
