@@ -11,7 +11,8 @@ public class K8sClusterService {
     public String createK8sCluster(String username, String clusterName, int workerCount, String osType, String size) {
         // Exemple : on crée 1 master et N workers avec des YAML templates
         try {
-            String templatePath = "/app/templates/";
+            String templatePath = "src/main/resources/templates/";
+
             String outputPath = "/app/generated/";
 
             // Génération des fichiers YAML à partir de modèles (tu peux utiliser String.replace() pour injecter les noms, ports…)
