@@ -2,6 +2,7 @@ package tn.esprit.vmservice.services;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import tn.esprit.vmservice.dto.VmRequest;
 import tn.esprit.vmservice.entity.VmInstance;
 import tn.esprit.vmservice.repositories.VmInstanceRepository;
 
@@ -12,19 +13,29 @@ import java.time.LocalDateTime;
 public class VmService {
 
     private final VmInstanceRepository vmInstanceRepository;
+    private final YamlGeneratorService yamlGeneratorService;
 
-    public String createTrainingVm(String username) {
-        // Logique de création de VM (YAML / RBD etc.)
+    public String createTrainingVm(VmRequest request) {
+        // 1. Génération dynamique du nom de VM
+        String vmName = "training-vm-" + request.getUsername();
 
-        // Sauvegarde de la trace
+        // 2. Création d'une instance persistée
         VmInstance vm = new VmInstance();
-        vm.setUsername(username);
-        vm.setVmName("training-vm-" + username);
-        vm.setStorageType("RBD");
+        vm.setUsername(request.getUsername());
+        vm.setVmName(vmName);
+        vm.setStorageType(request.getStorageType() != null ? request.getStorageType() : "RBD");
         vm.setStatus("CREATED");
         vm.setCreatedAt(LocalDateTime.now());
-
         vmInstanceRepository.save(vm);
-        return "VM created for user: " + username;
+
+        // 3. Génération du YAML personnalisé
+        String yamlContent = yamlGeneratorService.generateYaml(request);
+
+        // (Optionnel) Affichage en console ou sauvegarde
+        System.out.println("---- YAML GENERATED ----\n" + yamlContent);
+
+        // TODO: Exécution automatique ou sauvegarde du YAML via `kubectl apply` si nécessaire
+
+        return "VM created for user: " + request.getUsername();
     }
 }
