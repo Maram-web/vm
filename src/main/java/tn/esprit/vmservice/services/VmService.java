@@ -38,4 +38,61 @@ public class VmService {
 
         return "VM created for user: " + request.getUsername();
     }
+
+    private String generateYaml(VmRequest request) {
+        String yaml = """
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          name: %s
+          labels:
+            app: %s
+        spec:
+          containers:
+          - name: %s
+            image: %s
+            resources:
+              requests:
+                memory: "%sMi"
+                cpu: "%s"
+              limits:
+                memory: "%sMi"
+                cpu: "%s"
+          restartPolicy: Never
+        """;
+
+        // Déduction des ressources selon size
+        String memory, cpu;
+        switch (request.getSize().toLowerCase()) {
+            case "small" -> {
+                memory = "256"; cpu = "0.5";
+            }
+            case "medium" -> {
+                memory = "512"; cpu = "1";
+            }
+            case "large" -> {
+                memory = "1024"; cpu = "2";
+            }
+            default -> {
+                memory = "256"; cpu = "0.5";
+            }
+        }
+
+        // Image selon osType
+        String image = switch (request.getOsType().toLowerCase()) {
+            case "ubuntu" -> "ubuntu:22.04";
+            case "windows" -> "mcr.microsoft.com/windows/servercore:ltsc2022"; // À adapter selon ton infra
+            default -> "ubuntu:22.04";
+        };
+
+        return String.format(yaml,
+                request.getVmName(), request.getVmName(),
+                request.getVmName(), image,
+                memory, cpu, memory, cpu
+        );
+    }
+
+
+
+
 }

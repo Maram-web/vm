@@ -7,8 +7,8 @@ import lombok.Setter;
 @Setter
 public class VmRequest {
     private String username;
-    private String vmName;       // Optionnel : sinon généré
-    private String osType;       // ex: ubuntu / windows
-    private String size;         // ex: small / medium / large
-    private String storageType;  // RBD / CephFS / S3
+    private String vmName;
+    private String osType;      // ubuntu / windows
+    private String size;        // small / medium / large
+    private String storageType; // RBD / S3 / CephFS (plus tard)
 }
