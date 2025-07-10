@@ -71,5 +71,13 @@ public class VmController {
         // appel kubectl delete
         return ResponseEntity.ok("VM supprimée : " + vmName);
     }
+    @GetMapping("/by-user")
+    public ResponseEntity<List<VmInstance>> getUserVms() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = auth.getName();
+        List<VmInstance> vms = vmInstanceRepository.findByUsername(username);
+        return ResponseEntity.ok(vms);
+    }
+
 
 }
