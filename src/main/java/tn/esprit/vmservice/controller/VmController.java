@@ -9,6 +9,8 @@ import tn.esprit.vmservice.entity.VmInstance;
 import tn.esprit.vmservice.repositories.VmInstanceRepository;
 import tn.esprit.vmservice.services.K8sClusterService;
 import tn.esprit.vmservice.services.VmService;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.util.List;
 
@@ -20,12 +22,18 @@ public class VmController {
 
     private final VmService vmService;
     private final VmInstanceRepository vmInstanceRepository;
-
     @PostMapping("/create")
     public ResponseEntity<String> createVm(@RequestBody VmRequest request) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = auth.getName();
+        request.setUsername(username); // injecte le vrai username depuis le token
+
         String result = vmService.createTrainingVm(request);
         return ResponseEntity.ok(result);
     }
+
+
+
 
     @GetMapping("/hello")
     public String sayHello() {
@@ -36,9 +44,10 @@ public class VmController {
     public List<VmInstance> getAllVMs() {
         return vmInstanceRepository.findAll();
     }
-
-    @GetMapping("/by-user/{username}")
-    public List<VmInstance> getVMsByUser(@PathVariable String username) {
+    @GetMapping("/my-vms")
+    public List<VmInstance> getMyVMs() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = auth.getName();
         return vmInstanceRepository.findByUsername(username);
     }
 
