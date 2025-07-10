@@ -19,6 +19,13 @@ spring:
     show-sql: true
     database-platform: org.hibernate.dialect.MySQLDialect
 
+eureka:
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+    service-url:
+      defaultZone: http://discovery-service:8761/eureka
+
 management:
   endpoints:
     web:
