@@ -4,8 +4,6 @@ server:
 spring:
   application:
     name: vm-service
-  main:
-    allow-bean-definition-overriding: true
 
   datasource:
     url: jdbc:mysql://mysql.user.svc.cluster.local:3306/vmdb
@@ -24,7 +22,7 @@ eureka:
     register-with-eureka: true
     fetch-registry: true
     service-url:
-      defaultZone: http://discovery-service:8761/eureka
+      defaultZone: http://discovery-service.discovery.svc.cluster.local:8761/eureka
 
 management:
   endpoints:
