@@ -57,5 +57,10 @@ public class VmController {
             return ResponseEntity.status(500).body("Erreur interne : " + e.getMessage());
         }
     }
+    @DeleteMapping("/delete/{vmName}")
+    public ResponseEntity<String> deleteVm(@PathVariable String vmName) {
+        // appel kubectl delete
+        return ResponseEntity.ok("VM supprimée : " + vmName);
+    }
 
 }
