@@ -29,6 +29,8 @@ public class VmController {
         request.setUsername(username); // injecte le vrai username depuis le token
 
         String result = vmService.createTrainingVm(request);
+        System.out.println("✅ Création VM pour : " + username);
+
         return ResponseEntity.ok(result);
     }
 
@@ -75,9 +77,29 @@ public class VmController {
     public ResponseEntity<List<VmInstance>> getUserVms() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String username = auth.getName();
+        System.out.println("🔐 Utilisateur connecté : " + username);
         List<VmInstance> vms = vmInstanceRepository.findByUsername(username);
         return ResponseEntity.ok(vms);
     }
+    @GetMapping("/details/{vmName}")
+    public ResponseEntity<VmInstance> getVmDetails(@PathVariable String vmName) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = auth.getName();
+
+        VmInstance vm = vmInstanceRepository.findByVmName(vmName);
+        if (vm == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        System.out.println("🔍 Accès demandé par " + username + " pour VM: " + vm.getVmName());
+
+        if (!vm.getUsername().equals(username)) {
+            return ResponseEntity.status(403).build();
+        }
+
+        return ResponseEntity.ok(vm);
+    }
+
 
 
 }
