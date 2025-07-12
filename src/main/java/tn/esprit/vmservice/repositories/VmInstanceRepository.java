@@ -11,5 +11,6 @@ import java.util.Optional;
 public interface VmInstanceRepository extends JpaRepository<VmInstance, Long> {
     List<VmInstance> findByUsername(String username);
     VmInstance findByVmName(String vmName);
+    boolean existsByUsernameAndVmName(String username, String vmName);
 
 }

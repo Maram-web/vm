@@ -28,12 +28,32 @@ public class VmController {
         String username = auth.getName();
         request.setUsername(username); // injecte le vrai username depuis le token
 
-        String result = vmService.createTrainingVm(request);
+        String vmName = request.getVmName();
+
+        // 🔍 Vérification si une VM avec le même nom existe déjà pour cet utilisateur
+        boolean exists = vmInstanceRepository.existsByUsernameAndVmName(username, vmName);
+        if (exists) {
+            return ResponseEntity.status(400).body("❌ Une VM nommée '" + vmName + "' existe déjà pour l'utilisateur " + username);
+        }
+
+        // ✅ Création de la VM
+        VmInstance vm = new VmInstance();
+        vm.setUsername(username);
+        vm.setVmName(vmName);
+        vm.setStorageType(request.getStorageType());
+        vm.setStatus("Créée");
+        vm.setCreatedAt(java.time.LocalDateTime.now());
+
+        vmInstanceRepository.save(vm);
+
         System.out.println("✅ Création VM pour : " + username);
 
-        return ResponseEntity.ok(result);
-    }
+        // (Tu peux ici ajouter l'appel à kubectl ou script de création)
+        vm.setDisplayName(request.getVmName());  // ou request.getDisplayName() si tu changes le DTO
 
+
+        return ResponseEntity.ok("✅ VM créée avec succès : " + vmName);
+    }
 
 
 

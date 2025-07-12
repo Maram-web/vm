@@ -20,4 +20,6 @@ public class VmInstance {
     private String storageType;      // RBD ou CephFS
     private String status;           // Créée / En cours / Supprimée
     private LocalDateTime createdAt; // Date de création
+    private String displayName; // Nom saisi par l'utilisateur lors de la création
+
 }
