@@ -29,6 +29,9 @@ spec:
           env:
             - name: SPRING_PROFILES_ACTIVE
               value: k8s
+            - name: EUREKA_URL
+              value: http://discovery-service.discovery.svc.cluster.local:8761/eureka/
+
 #          readinessProbe:
 #            httpGet:
 #              path: /actuator/health
