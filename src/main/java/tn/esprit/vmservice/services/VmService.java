@@ -6,7 +6,13 @@ import tn.esprit.vmservice.dto.VmRequest;
 import tn.esprit.vmservice.entity.VmInstance;
 import tn.esprit.vmservice.repositories.VmInstanceRepository;
 
+import java.io.InputStream;
 import java.time.LocalDateTime;
+import com.jcraft.jsch.ChannelExec;
+import com.jcraft.jsch.JSch;
+import com.jcraft.jsch.JSchException;
+import com.jcraft.jsch.Session;
+
 
 @Service
 @RequiredArgsConstructor
@@ -16,6 +22,7 @@ public class VmService {
     private final YamlGeneratorService yamlGeneratorService;
 
     public String createTrainingVm(VmRequest request) {
+
         // 1. Génération dynamique du nom de VM
         String vmName = "training-vm-" + request.getUsername();
 
@@ -92,7 +99,48 @@ public class VmService {
         );
     }
 
+    public String executeCommand(String ip, String username, String password, String command) throws Exception {
+        JSch jsch = new JSch();
+        Session session = null;
+        ChannelExec channel = null;
 
+        try {
+            session = jsch.getSession(username, ip, 22);
+            session.setPassword(password);
+            session.setConfig("StrictHostKeyChecking", "no");
+            session.connect(10000); // 10 sec timeout
 
+            channel = (ChannelExec) session.openChannel("exec");
+            channel.setCommand(command);
+            channel.setInputStream(null); // very important
+            channel.setErrStream(System.err); // show errors
 
-}
+            InputStream in = channel.getInputStream();
+            channel.connect();
+
+            StringBuilder output = new StringBuilder();
+            byte[] buffer = new byte[1024];
+            int read;
+
+            while (true) {
+                while (in.available() > 0) {
+                    read = in.read(buffer, 0, 1024);
+                    if (read < 0) break;
+                    output.append(new String(buffer, 0, read));
+                }
+                if (channel.isClosed()) {
+                    if (in.available() > 0) continue;
+                    break;
+                }
+                Thread.sleep(200);
+            }
+
+            return output.toString();
+
+        } catch (JSchException e) {
+            throw new RuntimeException("SSH connection failed: " + e.getMessage(), e);
+        } finally {
+            if (channel != null) channel.disconnect();
+            if (session != null) session.disconnect();
+        }
+    }}

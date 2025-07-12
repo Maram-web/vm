@@ -13,6 +13,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/vm")
@@ -22,6 +23,26 @@ public class VmController {
 
     private final VmService vmService;
     private final VmInstanceRepository vmInstanceRepository;
+
+    @PostMapping("/{name}/exec")
+    public ResponseEntity<String> execCommand(
+            @PathVariable String name,
+            @RequestBody Map<String, String> body) {
+
+        try {
+            String command = body.get("command");
+            // Pour la démo on fixe l’IP, l’utilisateur, etc.
+            String ip = "192.168.122.45";  // à remplacer dynamiquement plus tard
+            String username = "springuser";
+            String password = "springpass";
+
+            String result = vmService.executeCommand(ip, username, password, command);
+            return ResponseEntity.ok(result);
+
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("❌ Erreur d’exécution : " + e.getMessage());
+        }
+    }
     @PostMapping("/create")
     public ResponseEntity<String> createVm(@RequestBody VmRequest request) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
