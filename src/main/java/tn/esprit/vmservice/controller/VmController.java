@@ -141,6 +141,16 @@ public class VmController {
         return ResponseEntity.ok(vm);
     }
 
+    @GetMapping("/test-ssh")
+    public ResponseEntity<String> testSshCommand() {
+        try {
+            String result = vmService.executeCommand("192.168.122.101", "springuser", "tonPassword", "ls -l");
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Erreur : " + e.getMessage());
+        }
+    }
+
 
 
 }
