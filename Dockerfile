@@ -13,3 +13,8 @@ COPY --from=build /app/target/*.jar app.jar
 ENV SPRING_PROFILES_ACTIVE=k8s
 
 ENTRYPOINT ["java", "-jar", "app.jar"]
+# ⬇️ Installe kubectl dans l'image du backend
+RUN apt-get update && \
+    apt-get install -y curl && \
+    curl -LO "https://dl.k8s.io/release/$(curl -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" && \
+    chmod +x kubectl && mv kubectl /usr/bin/
