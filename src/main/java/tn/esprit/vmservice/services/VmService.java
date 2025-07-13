@@ -7,11 +7,17 @@ import tn.esprit.vmservice.entity.VmInstance;
 import tn.esprit.vmservice.repositories.VmInstanceRepository;
 
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.LocalDateTime;
 import com.jcraft.jsch.ChannelExec;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.Map;
 
 
 @Service
@@ -22,28 +28,54 @@ public class VmService {
     private final YamlGeneratorService yamlGeneratorService;
 
     public String createTrainingVm(VmRequest request) {
+        Map<String, String> nodeToIp = Map.of(
+                "ceph2", "192.168.13.22",
+                "ceph3", "192.168.13.33",
+                "ceph4", "192.168.13.44"
+        );
 
-        // 1. Génération dynamique du nom de VM
-        String vmName = "training-vm-" + request.getUsername();
+        String vmName = request.getVmName();
+        String username = request.getUsername();
 
-        // 2. Création d'une instance persistée
+        // Enregistrer la VM
         VmInstance vm = new VmInstance();
-        vm.setUsername(request.getUsername());
+        vm.setUsername(username);
         vm.setVmName(vmName);
         vm.setStorageType(request.getStorageType() != null ? request.getStorageType() : "RBD");
         vm.setStatus("CREATED");
         vm.setCreatedAt(LocalDateTime.now());
         vmInstanceRepository.save(vm);
 
-        // 3. Génération du YAML personnalisé
-        String yamlContent = yamlGeneratorService.generateYaml(request);
+        try {
+            // 1️⃣ Générer le YAML
+            String yamlContent = yamlGeneratorService.generateYaml(request);
 
-        // (Optionnel) Affichage en console ou sauvegarde
-        System.out.println("---- YAML GENERATED ----\n" + yamlContent);
+            // 2️⃣ Appliquer via kubectl
+            String kubectlOutput = applyYamlToCluster(yamlContent);
 
-        // TODO: Exécution automatique ou sauvegarde du YAML via `kubectl apply` si nécessaire
+            // 3️⃣ Attendre que le pod démarre
+            Thread.sleep(10000); // adapte si nécessaire
 
-        return "VM created for user: " + request.getUsername();
+            // 4️⃣ Trouver le node + IP
+            String nodeName = getNodeHostingPod(vmName);
+            String ip = nodeToIp.get(nodeName);
+
+            // 5️⃣ Commande test
+            String output = executeCommand(ip, "springuser", "tonPassword", "echo Hello depuis " + vmName);
+
+            // 6️⃣ Réponse finale
+            return "✅ VM déployée avec succès :\n" + kubectlOutput + "\n\n💻 Commande test :\n" + output;
+
+        } catch (Exception e) {
+            return "❌ Erreur lors du déploiement : " + e.getMessage();
+        }
+    }
+
+
+    public String getNodeHostingPod(String podName) throws Exception {
+        Process process = Runtime.getRuntime().exec("kubectl get pod " + podName + " -n user -o=jsonpath='{.spec.nodeName}'");
+        process.waitFor();
+        return new String(process.getInputStream().readAllBytes()).replace("'", "");
     }
 
     private String generateYaml(VmRequest request) {
@@ -143,4 +175,39 @@ public class VmService {
             if (channel != null) channel.disconnect();
             if (session != null) session.disconnect();
         }
-    }}
+    }
+
+    public String applyYamlToCluster(String yamlContent) throws IOException, InterruptedException {
+        // 1. Sauvegarder dans un fichier temporaire
+        File tempFile = File.createTempFile("vm-", ".yaml");
+        try (FileWriter writer = new FileWriter(tempFile)) {
+            writer.write(yamlContent);
+        }
+
+        // 2. Lancer la commande kubectl apply
+        ProcessBuilder processBuilder = new ProcessBuilder("kubectl", "apply", "-f", tempFile.getAbsolutePath());
+        processBuilder.redirectErrorStream(true);
+        Process process = processBuilder.start();
+
+        // 3. Lire la sortie
+        StringBuilder output = new StringBuilder();
+        try (InputStream in = process.getInputStream()) {
+            int c;
+            while ((c = in.read()) != -1) {
+                output.append((char) c);
+            }
+        }
+
+        int exitCode = process.waitFor();
+        tempFile.delete(); // nettoyage
+
+        if (exitCode != 0) {
+            throw new RuntimeException("❌ Erreur lors du kubectl apply :\n" + output);
+        }
+
+        return output.toString();
+    }
+
+
+
+}

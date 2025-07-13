@@ -21,5 +21,5 @@ public class VmInstance {
     private String status;           // Créée / En cours / Supprimée
     private LocalDateTime createdAt; // Date de création
     private String displayName; // Nom saisi par l'utilisateur lors de la création
-
+    private String osType; // 👈 ajoute cette ligne si elle manque
 }
