@@ -10,9 +10,10 @@ WORKDIR /app
 
 # ⬇️ Installe kubectl dans l'image finale
 RUN apt-get update && apt-get install -y curl && \
-    bash -c 'KUBECTL_VERSION=$(curl -s https://dl.k8s.io/release/stable.txt) && \
-    curl -LO https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl && \
-    chmod +x kubectl && mv kubectl /usr/bin/'
+    curl -s https://dl.k8s.io/release/stable.txt -o /tmp/version.txt && \
+    curl -LO "https://dl.k8s.io/release/$(cat /tmp/version.txt)/bin/linux/amd64/kubectl" && \
+    chmod +x kubectl && mv kubectl /usr/bin/
+
 
 # Copie du jar compilé depuis le build
 COPY --from=build /app/target/*.jar app.jar
