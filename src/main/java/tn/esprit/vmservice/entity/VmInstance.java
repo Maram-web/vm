@@ -22,4 +22,6 @@ public class VmInstance {
     private LocalDateTime createdAt; // Date de création
     private String displayName; // Nom saisi par l'utilisateur lors de la création
     private String osType; // 👈 ajoute cette ligne si elle manque
+    private String size;      // 👈 ajoute ce champ
+
 }
