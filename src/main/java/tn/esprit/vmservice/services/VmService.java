@@ -44,6 +44,8 @@ public class VmService {
         vm.setStorageType(request.getStorageType() != null ? request.getStorageType() : "RBD");
         vm.setStatus("CREATED");
         vm.setCreatedAt(LocalDateTime.now());
+        vm.setSize(request.getSize());       // 👈 nouveau
+        vm.setOsType(request.getOsType());   //
         vmInstanceRepository.save(vm);
 
         try {
@@ -185,7 +187,7 @@ public class VmService {
         }
 
         // 2. Lancer la commande kubectl apply
-        ProcessBuilder processBuilder = new ProcessBuilder("kubectl", "apply", "-f", tempFile.getAbsolutePath());
+        ProcessBuilder processBuilder = new ProcessBuilder("/usr/bin/kubectl", "apply", "-f", tempFile.getAbsolutePath());
         processBuilder.redirectErrorStream(true);
         Process process = processBuilder.start();
 
@@ -207,6 +209,7 @@ public class VmService {
 
         return output.toString();
     }
+
 
 
 
