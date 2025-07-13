@@ -4,22 +4,21 @@ WORKDIR /app
 COPY . .
 RUN mvn clean package -DskipTests
 
-# Étape 2 : Image finale avec Java + kubectl
+# Étape 2 : Image finale
 FROM eclipse-temurin:17-jdk
 WORKDIR /app
 
-# ⬇️ Installe kubectl dans l'image finale
+# ✅ Installer curl + kubectl proprement
 RUN apt-get update && apt-get install -y curl && \
-    bash -c 'VERSION=$(curl -s https://dl.k8s.io/release/stable.txt) && \
-    curl -LO https://dl.k8s.io/release/${VERSION}/bin/linux/amd64/kubectl && \
-    chmod +x kubectl && mv kubectl /usr/bin/'
+    KUBECTL_VERSION=$(curl -s https://dl.k8s.io/release/stable.txt) && \
+    curl -LO https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl && \
+    chmod +x kubectl && mv kubectl /usr/bin/kubectl
 
-
-# Copie du jar compilé depuis le build
+# Copier le jar
 COPY --from=build /app/target/*.jar app.jar
 
-# Profil Spring (ex: application-k8s.yml)
+# Profil K8s si besoin
 ENV SPRING_PROFILES_ACTIVE=k8s
 
-# Commande de démarrage
+# Démarrage
 ENTRYPOINT ["java", "-jar", "app.jar"]
