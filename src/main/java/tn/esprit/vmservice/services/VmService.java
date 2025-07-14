@@ -5,6 +5,7 @@ import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -20,7 +21,6 @@ import java.io.InputStreamReader;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.Map;
-
 /**
  * Service de gestion des VMs.
  */
@@ -31,17 +31,28 @@ public class VmService {
 
     private final VmInstanceRepository vmInstanceRepository;
     private final YamlGeneratorService yamlGeneratorService;
+    @Value("${ssh.password}")
+    private String sshPassword; // Injecte automatiquement "maram"
+
+
+
 
     public String createTrainingVm(VmRequest request) {
         log.info("Début déploiement VM {}", request.getVmName());
 
         Map<String, String> nodeToIp = Map.of(
-                "ceph2-virtual-machine", "192.168.194.129",
-                "ceph3-virtual-machine", "192.168.194.130",
-                "ceph4-virtual-machine", "192.168.194.131",
-                "ceph1-virtual-machine", "192.168.194.128" // ← optionnel, si le master peut exécuter aussi
+                "ceph1-virtual-machine", "192.168.13.11",
+                "ceph2-virtual-machine", "192.168.13.22",
+                "ceph3-virtual-machine", "192.168.13.33",
+                "ceph4-virtual-machine", "192.168.13.44"
         );
 
+        Map<String, String> nodeToUser = Map.of(
+                "ceph1-virtual-machine", "ceph1",
+                "ceph2-virtual-machine", "ceph2",
+                "ceph3-virtual-machine", "ceph3",
+                "ceph4-virtual-machine", "ceph4"
+        );
 
         // 0) Persistance
         VmInstance vm = new VmInstance();
@@ -76,16 +87,18 @@ public class VmService {
             log.info("Le pod {} est sur le nœud {}", request.getVmName(), node);
 
             String ip = nodeToIp.get(node);
-            if (ip == null) throw new RuntimeException("No IP found for node " + node);
+            String user = nodeToUser.get(node);
+
+            if (ip == null || user == null) {
+                throw new RuntimeException("No mapping found for node: " + node);
+            }
 
             // 5) Test SSH
-            log.info("Test SSH vers {}@{}", request.getUsername(), ip);
-            String sshOut = executeCommand(ip,
-                    request.getUsername(),
-                    request.getPassword(),
-                    "echo Hello depuis " + request.getVmName());
+            log.info("Test SSH vers {}@{}", user, ip);
+            String sshOut = executeCommand(ip, user, "maram", "echo Hello depuis " + request.getVmName());
             log.info("SSH test renvoyé :\n{}", sshOut);
 
+            // 6) Retour final
             return "✅ Déploiement réussi.\n\n— kubectl —\n" + kubectlOut +
                     "\n\n— SSH test —\n" + sshOut;
 
