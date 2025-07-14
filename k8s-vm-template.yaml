@@ -20,6 +20,7 @@ spec:
       labels:
         app: vm-service
     spec:
+      serviceAccountName: vm-executor # ✅ AJOUT ICI
       containers:
         - name: vm-service
           image: marammanai/vm-service:__IMAGE_TAG__  # ✅ Remplace avec ta vraie version
