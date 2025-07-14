@@ -16,24 +16,6 @@ pipeline {
             }
         }
 
-        stage('Build & Push vm-service Image') {
-            steps {
-                sh "docker build -t $IMAGE_NAME ."
-                withCredentials([usernamePassword(credentialsId: 'docker-hub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                    sh '''
-                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-                        docker push $IMAGE_NAME
-                    '''
-                }
-            }
-        }
-
-        stage('Inject vm-service Tag into YAML') {
-            steps {
-                sh "sed 's|__IMAGE_TAG__|$IMAGE_TAG|g' k8s-vm-template.yaml > $DEPLOY_YAML"
-            }
-        }
-
         stage('Build & Push ubuntu-ssh-kubectl Image') {
             steps {
                 script {
@@ -48,9 +30,6 @@ pipeline {
                         docker push ${UBUNTU_IMAGE_NAME}
                     """
 
-                    // ✅ Inject Ubuntu image tag into YAML
-                    sh "sed -i 's|__UBUNTU_IMAGE_TAG__|${UBUNTU_IMAGE_TAG}|g' $DEPLOY_YAML"
-
                     // ✅ Update or add ubuntu.image.tag in application.properties
                     sh """
                         if grep -q '^ubuntu.image.tag=' src/main/resources/application.properties; then
@@ -60,6 +39,27 @@ pipeline {
                         fi
                     """
                 }
+            }
+        }
+
+        stage('Build & Push vm-service Image') {
+            steps {
+                sh "docker build -t $IMAGE_NAME ."
+                withCredentials([usernamePassword(credentialsId: 'docker-hub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                    sh '''
+                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                        docker push $IMAGE_NAME
+                    '''
+                }
+            }
+        }
+
+        stage('Inject Tags into YAML') {
+            steps {
+                // Remplace les deux tags dans le YAML
+                sh '''
+                    sed "s|__IMAGE_TAG__|$IMAGE_TAG|g; s|__UBUNTU_IMAGE_TAG__|$UBUNTU_IMAGE_TAG|g" k8s-vm-template.yaml > $DEPLOY_YAML
+                '''
             }
         }
 
@@ -76,10 +76,10 @@ pipeline {
 
     post {
         success {
-            echo "✅ vm-service deployed with tag: ${IMAGE_TAG}"
+            echo "✅ vm-service deployed with tag: ${IMAGE_TAG} and ubuntu-ssh-kubectl tag: ${UBUNTU_IMAGE_TAG}"
         }
         failure {
-            echo "❌ vm-service deployment failed"
+            echo "❌ Deployment failed"
         }
     }
 }
