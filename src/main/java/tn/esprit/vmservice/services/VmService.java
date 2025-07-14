@@ -18,10 +18,12 @@ import java.io.FileWriter;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.IOException;
-import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.util.Map;
 
+/**
+ * Service de gestion des VMs.
+ */
 @Service
 @RequiredArgsConstructor
 public class VmService {
@@ -30,116 +32,108 @@ public class VmService {
     private final VmInstanceRepository vmInstanceRepository;
     private final YamlGeneratorService yamlGeneratorService;
 
-    /**
-     * Crée une VM d'entraînement selon la requête reçue.
-     * Génère un manifeste YAML, l'applique via kubectl,
-     * attend le démarrage, trouve le nœud, puis teste une connexion SSH.
-     */
     public String createTrainingVm(VmRequest request) {
-        log.info("Début de createTrainingVm pour {}", request.getVmName());
+        log.info("Début déploiement VM {}", request.getVmName());
 
         Map<String, String> nodeToIp = Map.of(
                 "ceph2", "192.168.13.22",
                 "ceph3", "192.168.13.33",
                 "ceph4", "192.168.13.44"
         );
-        String vmName = request.getVmName();
-        String username = request.getUsername();
 
-        // 0️⃣ Persist DB
+        // 0) Persistance
         VmInstance vm = new VmInstance();
-        vm.setUsername(username);
-        vm.setVmName(vmName);
+        vm.setUsername(request.getUsername());
+        vm.setVmName(request.getVmName());
         vm.setStorageType(request.getStorageType() != null ? request.getStorageType() : "RBD");
+        vm.setOsType(request.getOsType());
+        vm.setSize(request.getSize());
         vm.setStatus("CREATED");
         vm.setCreatedAt(LocalDateTime.now());
-        vm.setSize(request.getSize());
-        vm.setOsType(request.getOsType());
         vmInstanceRepository.save(vm);
         log.debug("VM enregistrée en base : {}", vm);
 
         try {
-            // 1️⃣ Générer le YAML
-            log.info("Génération du manifeste YAML pour {}", vmName);
-            String yamlContent = yamlGeneratorService.generateYaml(request);
-            log.debug("YAML généré :\n{}", yamlContent);
+            // 1) Génération YAML
+            log.info("Génération du YAML pour {}", request.getVmName());
+            String yaml = yamlGeneratorService.generateYaml(request);
+            log.debug("YAML généré :\n{}", yaml);
 
-            // 2️⃣ Appliquer via kubectl
-            log.info("Application du manifeste YAML sur le cluster");
-            String kubectlOutput = applyYamlToCluster(yamlContent);
-            log.info("kubectl apply renvoyé :\n{}", kubectlOutput);
+            // 2) kubectl apply
+            log.info("Application du manifeste sur le cluster");
+            String kubectlOut = applyYamlToCluster(yaml);
+            log.info("kubectl apply retourné :\n{}", kubectlOut);
 
-            // 3️⃣ Pause pour laisser le pod démarrer
-            log.info("Attente de 10s pour démarrage du pod {}", vmName);
+            // 3) Pause démarrage
+            log.info("Attente du démarrage du pod {}", request.getVmName());
             Thread.sleep(10_000);
 
-            // 4️⃣ Trouver le nœud hébergeant le pod
-            log.info("Récupération du nœud pour le pod {}", vmName);
-            String nodeName = getNodeHostingPod(vmName);
-            log.info("Le pod {} est sur le nœud {}", vmName, nodeName);
+            // 4) Découverte nœud
+            log.info("Récupération du nœud hébergeant {}", request.getVmName());
+            String node = getNodeHostingPod(request.getVmName());
+            log.info("Le pod {} est sur le nœud {}", request.getVmName(), node);
 
-            String ip = nodeToIp.get(nodeName);
-            if (ip == null) {
-                throw new RuntimeException("Aucune IP configurée pour le nœud " + nodeName);
-            }
+            String ip = nodeToIp.get(node);
+            if (ip == null) throw new RuntimeException("No IP found for node " + node);
 
-            // 5️⃣ Test SSH
-            log.info("Exécution d'une commande de test en SSH sur {}@{}", username, ip);
-            String sshOutput = executeCommand(ip, username, request.getPassword(),
-                    "echo Hello depuis " + vmName);
-            log.info("SSH test renvoyé :\n{}", sshOutput);
+            // 5) Test SSH
+            log.info("Test SSH vers {}@{}", request.getUsername(), ip);
+            String sshOut = executeCommand(ip,
+                    request.getUsername(),
+                    request.getPassword(),
+                    "echo Hello depuis " + request.getVmName());
+            log.info("SSH test renvoyé :\n{}", sshOut);
 
-            // 6️⃣ Succès
-            return String.format(
-                    "✅ VM '%s' déployée avec succès !\n\nkubectl:\n%s\n\nSSH test:\n%s",
-                    vmName, kubectlOutput, sshOutput
-            );
+            return "✅ Déploiement réussi.\n\n— kubectl —\n" + kubectlOut +
+                    "\n\n— SSH test —\n" + sshOut;
 
         } catch (Exception e) {
-            log.error("Erreur lors de la création de la VM {}", vmName, e);
-            return "❌ Erreur lors du déploiement de " + vmName + " : " + e.getMessage();
+            log.error("Erreur déploiement VM {}", request.getVmName(), e);
+            return "❌ Échec déploiement : " + e.getMessage();
         }
     }
 
     /**
-     * Récupère le nom du nœud où tourne le pod (namespace 'vm').
+     * Renvoie le nom du nœud Kubernetes qui héberge le pod.
      */
-    private String getNodeHostingPod(String podName) throws IOException, InterruptedException {
+    public String getNodeHostingPod(String podName) throws IOException, InterruptedException {
         ProcessBuilder pb = new ProcessBuilder(
                 "kubectl", "get", "pod", podName, "-n", "vm",
                 "-o", "jsonpath={.spec.nodeName}"
         );
         pb.redirectErrorStream(true);
-        log.debug("Lancement de la commande : {}", String.join(" ", pb.command()));
+        log.debug("Lancement : {}", String.join(" ", pb.command()));
+        Process p = pb.start();
 
-        Process proc = pb.start();
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(proc.getInputStream()))) {
-            String node = reader.readLine();
-            int code = proc.waitFor();
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(p.getInputStream()))) {
+            String node = br.readLine();
+            int code = p.waitFor();
             if (code != 0) {
-                throw new RuntimeException("kubectl get pod exit code " + code);
+                throw new RuntimeException("kubectl get pod exit code: " + code);
             }
             return node;
         }
     }
 
     /**
-     * Exécute une commande SSH sur une machine distante.
+     * Execute une commande SSH et renvoie le résultat.
      */
-    public String executeCommand(String ip, String username, String password, String command) {
-        log.debug("executeCommand SSH -> {}@{} : {}", username, ip, command);
+    public String executeCommand(String ip,
+                                 String user,
+                                 String password,
+                                 String command) {
+        log.debug("SSH exec: {}@{} => {}", user, ip, command);
         JSch jsch = new JSch();
         Session session = null;
         ChannelExec channel = null;
         try {
-            session = jsch.getSession(username, ip, 22);
+            session = jsch.getSession(user, ip, 22);
             session.setPassword(password);
             session.setConfig("StrictHostKeyChecking", "no");
             session.connect(10_000);
 
             channel = (ChannelExec) session.openChannel("exec");
             channel.setCommand(command);
-            channel.setInputStream(null);
             channel.setErrStream(System.err);
             InputStream in = channel.getInputStream();
             channel.connect();
@@ -155,11 +149,11 @@ public class VmService {
                 if (channel.isClosed()) break;
                 Thread.sleep(200);
             }
-            log.debug("SSH exit status: {}", channel.getExitStatus());
+            log.debug("SSH exit-status: {}", channel.getExitStatus());
             return out.toString();
 
-        } catch (JSchException|IOException|InterruptedException e) {
-            log.error("Erreur SSH sur {}@{}", username, ip, e);
+        } catch (Exception e) {
+            log.error("SSH error {}@{}", user, ip, e);
             throw new RuntimeException("SSH failed: " + e.getMessage(), e);
         } finally {
             if (channel != null) channel.disconnect();
@@ -168,37 +162,34 @@ public class VmService {
     }
 
     /**
-     * Sauvegarde le YAML dans un fichier temporaire et l'applique
-     * via 'kubectl apply -f'.
+     * Enregistre le YAML dans un fichier temporaire et fait kubectl apply.
      */
     public String applyYamlToCluster(String yamlContent) throws IOException, InterruptedException {
-        // 1️⃣ Écrire dans un fichier temp
         File tmp = File.createTempFile("vm-", ".yaml");
         try (FileWriter fw = new FileWriter(tmp)) {
             fw.write(yamlContent);
         }
-        log.debug("Manifeste écrit dans {}", tmp.getAbsolutePath());
+        log.debug("YAML temporaire écrit : {}", tmp.getAbsolutePath());
 
-        // 2️⃣ Lancer kubectl
         ProcessBuilder pb = new ProcessBuilder("kubectl", "apply", "-f", tmp.getAbsolutePath());
         pb.redirectErrorStream(true);
-        log.debug("Lancement de la commande : {}", String.join(" ", pb.command()));
+        log.debug("Lancement : {}", String.join(" ", pb.command()));
+        Process p = pb.start();
 
-        Process proc = pb.start();
         StringBuilder out = new StringBuilder();
-        try (BufferedReader r = new BufferedReader(new InputStreamReader(proc.getInputStream()))) {
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(p.getInputStream()))) {
             String line;
-            while ((line = r.readLine()) != null) {
-                out.append(line).append(System.lineSeparator());
+            while ((line = br.readLine()) != null) {
+                out.append(line).append('\n');
             }
         }
-        int code = proc.waitFor();
+        int code = p.waitFor();
         tmp.delete();
-
         log.debug("kubectl apply exit code: {}", code);
+
         if (code != 0) {
-            log.error("kubectl apply failed: \n{}", out);
-            throw new RuntimeException("Erreur kubectl apply (code " + code + "):\n" + out);
+            log.error("kubectl apply a échoué :\n{}", out);
+            throw new RuntimeException("Erreur kubectl apply (code " + code + ")\n" + out);
         }
         return out.toString();
     }

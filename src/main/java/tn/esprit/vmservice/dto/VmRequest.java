@@ -11,4 +11,6 @@ public class VmRequest {
     private String osType;      // ubuntu / windows
     private String size;        // small / medium / large
     private String storageType; // RBD / S3 / CephFS (plus tard)
+    private String password;   // ← nouveau champ SSH password
+
 }
