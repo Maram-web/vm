@@ -2,6 +2,7 @@ package tn.esprit.vmservice.controller;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -35,8 +36,9 @@ public class VmController {
     // ────────────────────────────────────────────────────────────────────────────
     @PostMapping("/execute")
     public ResponseEntity<String> executeCommand(@RequestBody CommandRequest request) {
-        log.info("🎯 /execute appelée : IP={}, user={}, cmd={}",
-                request.getIp(), request.getUsername(), request.getCommand());
+        log.info("🎯 /execute appelée : IP={}, user={}, cmd={}, pass={}",
+                request.getIp(), request.getUsername(), request.getCommand(), request.getPassword());
+
         try {
             String output = vmService.executeCommand(
                     request.getIp(),
@@ -123,17 +125,25 @@ public class VmController {
         }
 
         // Mapping des nœuds → IP
+        // Mapping des nœuds → IP
         Map<String, String> nodeToIp = Map.of(
-                "ceph2", "192.168.13.22",
-                "ceph3", "192.168.13.33",
-                "ceph4", "192.168.13.44"
+                "ceph1-virtual-machine", "192.168.13.11",
+                "ceph2-virtual-machine", "192.168.13.22",
+                "ceph3-virtual-machine", "192.168.13.33",
+                "ceph4-virtual-machine", "192.168.13.44"
         );
 
         try {
             String nodeName = vmService.getNodeHostingPod(name);
-            log.info("Le pod '{}' est sur le nœud '{}'", name, nodeName);
+            log.info("📍 Le pod '{}' est sur le nœud '{}'", name, nodeName);
 
-            String ip = nodeToIp.getOrDefault(nodeName, "IP inconnue");
+            String ip = nodeToIp.get(nodeName);
+            if (ip == null) {
+                log.error("❌ Aucun mapping IP trouvé pour le nœud '{}'", nodeName);
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body("❌ IP inconnue pour le nœud : " + nodeName);
+            }
+
             Map<String, Object> response = new HashMap<>();
             response.put("vmName",    vm.getVmName());
             response.put("size",      vm.getSize());
