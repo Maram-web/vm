@@ -1,5 +1,6 @@
 package tn.esprit.vmservice.services;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import tn.esprit.vmservice.dto.VmRequest;
 
@@ -29,15 +30,18 @@ spec:
 """.formatted(
                 req.getVmName(),
                 req.getVmName(),
-                getImage(req.getOsType(), req.getUbuntuImageTag()),
+                getImage(req.getOsType()),
                 getCpu(req.getSize()),
                 getMemory(req.getSize())
         );
     }
 
-    private String getImage(String os, String ubuntuTag) {
+    @Value("${ubuntu.image.tag}")
+    private String ubuntuImageTag;
+
+    private String getImage(String os) {
         return os.equalsIgnoreCase("ubuntu")
-                ? "marammanai/ubuntu-ssh-kubectl:" + ubuntuTag
+                ? "marammanai/ubuntu-ssh-kubectl:" + ubuntuImageTag
                 : "mcr.microsoft.com/windows/nanoserver";
     }
 

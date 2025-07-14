@@ -39,25 +39,32 @@ pipeline {
             }
         }
 
-        stage('Build & Push ubuntu-ssh-kubectl Image') {
-            steps {
-                script {
-                    def TIMESTAMP2 = new Date().format('yyyyMMdd-HHmmss')
-                    def UBUNTU_IMAGE_TAG = "v${TIMESTAMP2}"
-                    def UBUNTU_IMAGE_NAME = "marammanai/ubuntu-ssh-kubectl:${UBUNTU_IMAGE_TAG}"
-                    env.UBUNTU_IMAGE_TAG = UBUNTU_IMAGE_TAG
+       stage('Build & Push ubuntu-ssh-kubectl Image') {
+           steps {
+               script {
+                   def TIMESTAMP2 = new Date().format('yyyyMMdd-HHmmss')
+                   def UBUNTU_IMAGE_TAG = "v${TIMESTAMP2}"
+                   def UBUNTU_IMAGE_NAME = "marammanai/ubuntu-ssh-kubectl:${UBUNTU_IMAGE_TAG}"
+                   env.UBUNTU_IMAGE_TAG = UBUNTU_IMAGE_TAG
 
-                    sh """
-                        cd ubuntu-image
-                        docker build -t ${UBUNTU_IMAGE_NAME} .
-                        docker push ${UBUNTU_IMAGE_NAME}
-                    """
+                   sh """
+                       cd ubuntu-image
+                       docker build -t ${UBUNTU_IMAGE_NAME} .
+                       docker push ${UBUNTU_IMAGE_NAME}
+                   """
 
-                    // Inject the Ubuntu image tag into the YAML
-                    sh "sed -i 's|__UBUNTU_IMAGE_TAG__|${UBUNTU_IMAGE_TAG}|g' $DEPLOY_YAML"
-                }
-            }
-        }
+                   // ✅ Remplace dans YAML
+                   sh "sed -i 's|__UBUNTU_IMAGE_TAG__|${UBUNTU_IMAGE_TAG}|g' $DEPLOY_YAML"
+
+                   // ✅ Ajoute la propriété si elle n’existe pas déjà
+                   sh """
+                       grep -q '^ubuntu.image.tag=' src/main/resources/application.properties && \
+                           sed -i 's|^ubuntu.image.tag=.*|ubuntu.image.tag=${UBUNTU_IMAGE_TAG}|' src/main/resources/application.properties || \
+                           echo 'ubuntu.image.tag=${UBUNTU_IMAGE_TAG}' >> src/main/resources/application.properties
+                   """
+               }
+           }
+       }
 
         stage('Deploy to Kubernetes') {
             steps {
