@@ -22,7 +22,7 @@ spec:
     spec:
       containers:
         - name: vm-service
-          image: marammanai/vm-service:__IMAGE_TAG__   # remplace __IMAGE_TAG__ par ta vraie version ex: v1
+          image: marammanai/vm-service:v1  # ✅ Remplace avec ta vraie version
           imagePullPolicy: Always
           ports:
             - containerPort: 8082
@@ -31,19 +31,21 @@ spec:
               value: k8s
             - name: EUREKA_URL
               value: http://discovery-service.discovery.svc.cluster.local:8761/eureka/
-
-#          readinessProbe:
-#            httpGet:
-#              path: /actuator/health
-#              port: 8082
-#            initialDelaySeconds: 10
-#            periodSeconds: 5
-#          livenessProbe:
-#            httpGet:
-#              path: /actuator/health
-#              port: 8082
-#            initialDelaySeconds: 30
-#            periodSeconds: 10
+          volumeMounts:
+            - name: kubectl-bin
+              mountPath: /usr/local/bin/kubectl
+              subPath: kubectl
+            - name: kubeconfig
+              mountPath: /root/.kube  # nécessaire si ton kubectl utilise ce fichier
+      volumes:
+        - name: kubectl-bin
+          hostPath:
+            path: /usr/bin/kubectl  # 📍 Chemin du binaire kubectl sur ta VM
+            type: File
+        - name: kubeconfig
+          hostPath:
+            path: /opt/kubeconfig  # 📍 Crée ce dossier et copie ton ~/.kube/config dedans
+            type: Directory
 ---
 apiVersion: v1
 kind: Service
@@ -58,4 +60,4 @@ spec:
     - name: http
       port: 8082
       targetPort: 8082
-      nodePort: 30092  # NodePort accessible via 192.168.194.128:30092
+      nodePort: 30092  # accès via http://<VM>:30092
