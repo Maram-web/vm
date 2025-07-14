@@ -6,67 +6,58 @@ import tn.esprit.vmservice.dto.VmRequest;
 @Service
 public class YamlGeneratorService {
 
-    public String generateYaml(VmRequest req) {
-        return """
-apiVersion: v1
-kind: Pod
-metadata:
-  name: %s
-spec:
-  containers:
-    - name: %s-container
-      image: linuxserver/openssh-server
-      env:
-        - name: PUID
-          value: "1000"
-        - name: PGID
-          value: "1000"
-        - name: TZ
-          value: "Europe/Paris"
-        - name: PASSWORD_ACCESS
-          value: "true"
-        - name: USER_PASSWORD
-          value: "root"
-        - name: USER_NAME
-          value: "root"
-      resources:
-        limits:
-          cpu: %s
-          memory: %s
-      volumeMounts:
-        - mountPath: /data
-          name: storage
-  volumes:
-    - name: storage
-      emptyDir: {}
-""".formatted(
-                req.getVmName(),
-                req.getVmName(),
-                getCpu(req.getSize()),
-                getMemory(req.getSize())
-        );
 
-    }
 
-    private String getImage(String os) {
-        return os.equalsIgnoreCase("ubuntu") ? "ubuntu:22.04" : "mcr.microsoft.com/windows/nanoserver";
-    }
+        public String generateYaml(VmRequest req) {
+            return """
+                    apiVersion: v1
+                    kind: Pod
+                    metadata:
+                      name: %s
+                    spec:
+                      containers:
+                        - name: %s-container
+                          image: %s
+                          resources:
+                            limits:
+                              cpu: %s
+                              memory: %s
+                          volumeMounts:
+                            - mountPath: /data
+                              name: storage
+                      volumes:
+                        - name: storage
+                          emptyDir: {}
+                    """.formatted(
+                    req.getVmName(),
+                    req.getVmName(),
+                    getImage(req.getOsType()),
+                    getCpu(req.getSize()),
+                    getMemory(req.getSize())
+            );
+        }
 
-    private String getCpu(String size) {
-        return switch (size.toLowerCase()) {
-            case "small" -> "500m";
-            case "medium" -> "1";
-            case "large" -> "2";
-            default -> "500m";
-        };
-    }
+        private String getImage(String os) {
+            return os.equalsIgnoreCase("ubuntu")
+                    ? "marammanai/ubuntu-ssh-kubectl:latest"
+                    : "mcr.microsoft.com/windows/nanoserver";
+        }
 
-    private String getMemory(String size) {
-        return switch (size.toLowerCase()) {
-            case "small" -> "512Mi";
-            case "medium" -> "1Gi";
-            case "large" -> "2Gi";
-            default -> "512Mi";
-        };
+        private String getCpu(String size) {
+            return switch (size.toLowerCase()) {
+                case "small" -> "500m";
+                case "medium" -> "1";
+                case "large" -> "2";
+                default -> "500m";
+            };
+        }
+
+        private String getMemory(String size) {
+            return switch (size.toLowerCase()) {
+                case "small" -> "512Mi";
+                case "medium" -> "1Gi";
+                case "large" -> "2Gi";
+                default -> "512Mi";
+            };
+        }
     }
-}
