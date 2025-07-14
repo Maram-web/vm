@@ -57,11 +57,14 @@ pipeline {
                    sh "sed -i 's|__UBUNTU_IMAGE_TAG__|${UBUNTU_IMAGE_TAG}|g' $DEPLOY_YAML"
 
                    // ✅ Ajoute la propriété si elle n’existe pas déjà
-                   sh """
-                       grep -q '^ubuntu.image.tag=' src/main/resources/application.properties && \
-                           sed -i 's|^ubuntu.image.tag=.*|ubuntu.image.tag=${UBUNTU_IMAGE_TAG}|' src/main/resources/application.properties || \
-                           echo 'ubuntu.image.tag=${UBUNTU_IMAGE_TAG}' >> src/main/resources/application.properties
-                   """
+                  sh """
+                      if grep -q '^ubuntu.image.tag=' src/main/resources/application.properties; then
+                          sed -i 's|^ubuntu.image.tag=.*|ubuntu.image.tag='${UBUNTU_IMAGE_TAG}'|' src/main/resources/application.properties
+                      else
+                          echo 'ubuntu.image.tag='${UBUNTU_IMAGE_TAG} >> src/main/resources/application.properties
+                      fi
+                  """
+
                }
            }
        }
