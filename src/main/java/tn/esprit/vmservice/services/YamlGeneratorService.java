@@ -37,9 +37,10 @@ spec:
 
     private String getImage(String os) {
         return os.equalsIgnoreCase("ubuntu")
-                ? "marammanai/ubuntu-ssh-kubectl:latest"
+                ? "marammanai/ubuntu-ssh-kubectl:__UBUNTU_IMAGE_TAG__"
                 : "mcr.microsoft.com/windows/nanoserver";
     }
+
 
     private String getCpu(String size) {
         return switch (size.toLowerCase()) {

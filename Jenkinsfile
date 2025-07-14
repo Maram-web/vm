@@ -39,6 +39,26 @@ pipeline {
             }
         }
 
+        stage('Build & Push ubuntu-ssh-kubectl Image') {
+            steps {
+                script {
+                    def TIMESTAMP2 = new Date().format('yyyyMMdd-HHmmss')
+                    def UBUNTU_IMAGE_TAG = "v${TIMESTAMP2}"
+                    def UBUNTU_IMAGE_NAME = "marammanai/ubuntu-ssh-kubectl:${UBUNTU_IMAGE_TAG}"
+                    env.UBUNTU_IMAGE_TAG = UBUNTU_IMAGE_TAG
+
+                    sh """
+                        cd ../ubuntu-image-folder
+                        docker build -t ${UBUNTU_IMAGE_NAME} .
+                        docker push ${UBUNTU_IMAGE_NAME}
+                    """
+
+                    // Inject the Ubuntu image tag into the YAML
+                    sh "sed -i 's|__UBUNTU_IMAGE_TAG__|${UBUNTU_IMAGE_TAG}|g' $DEPLOY_YAML"
+                }
+            }
+        }
+
         stage('Deploy to Kubernetes') {
             steps {
                 sh '''
