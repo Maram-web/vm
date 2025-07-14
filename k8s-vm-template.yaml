@@ -20,10 +20,10 @@ spec:
       labels:
         app: vm-service
     spec:
-      serviceAccountName: vm-executor # ✅ AJOUT ICI
+      serviceAccountName: vm-executor    # ← on utilise le SA qu’on a créé
       containers:
         - name: vm-service
-          image: marammanai/vm-service:__IMAGE_TAG__  # ✅ Remplace avec ta vraie version
+          image: marammanai/vm-service:__IMAGE_TAG__
           imagePullPolicy: Always
           ports:
             - containerPort: 8082
@@ -32,21 +32,8 @@ spec:
               value: k8s
             - name: EUREKA_URL
               value: http://discovery-service.discovery.svc.cluster.local:8761/eureka/
-          volumeMounts:
-            - name: kubectl-bin
-              mountPath: /usr/local/bin/kubectl
-              subPath: kubectl
-            - name: kubeconfig
-              mountPath: /root/.kube  # nécessaire si ton kubectl utilise ce fichier
-      volumes:
-        - name: kubectl-bin
-          hostPath:
-            path: /usr/bin/kubectl  # 📍 Chemin du binaire kubectl sur ta VM
-            type: File
-        - name: kubeconfig
-          hostPath:
-            path: /opt/kubeconfig  # 📍 Crée ce dossier et copie ton ~/.kube/config dedans
-            type: Directory
+          # plus aucun volumeMount pour kubectl / kubeconfig
+      # plus aucun volume pour kubectl-bin / kubeconfig
 ---
 apiVersion: v1
 kind: Service
@@ -61,4 +48,4 @@ spec:
     - name: http
       port: 8082
       targetPort: 8082
-      nodePort: 30092  # accès via http://<VM>:30092
+      nodePort: 30092
