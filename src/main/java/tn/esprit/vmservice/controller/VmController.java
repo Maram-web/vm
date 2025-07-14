@@ -21,6 +21,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.beans.factory.annotation.Value;
+
 @Slf4j
 @RestController
 @RequestMapping("/api/vm")
@@ -30,6 +32,8 @@ public class VmController {
     private final K8sClusterService k8sClusterService;
     private final VmService vmService;
     private final VmInstanceRepository vmInstanceRepository;
+    @Value("${ssh.password}")
+    private String sshPassword;
 
     // ────────────────────────────────────────────────────────────────────────────
     // Exécution de commande SSH (via body JSON)
@@ -242,20 +246,29 @@ public class VmController {
     @GetMapping("/test-ssh")
     public ResponseEntity<String> testSshCommand() {
         log.info("🎯 /test-ssh appelée");
-        try {
-            String result = vmService.executeCommand(
-                    "192.168.122.101",
-                    "springuser",
-                    "tonPassword",
-                    "ls -l"
-            );
-            log.info("✅ resultat test-ssh :\n{}", result);
-            return ResponseEntity.ok(result);
-        } catch (Exception e) {
-            log.error("❌ Erreur test-ssh : {}", e.getMessage(), e);
-            return ResponseEntity.status(500)
-                    .body("❌ Erreur : " + e.getMessage());
+
+        Map<String, String> nodeToIp = Map.of(
+                "ceph1", "192.168.13.11",
+                "ceph2", "192.168.13.22",
+                "ceph3", "192.168.13.33",
+                "ceph4", "192.168.13.44"
+        );
+
+        for (Map.Entry<String, String> entry : nodeToIp.entrySet()) {
+            String user = entry.getKey();
+            String ip = entry.getValue();
+            try {
+                String output = vmService.executeCommand(ip, user, sshPassword, "echo Test SSH from " + user);
+                log.info("✅ SSH OK on {}: {}", ip, output);
+                return ResponseEntity.ok("✅ SSH OK on " + user + " (" + ip + "):\n" + output);
+            } catch (Exception e) {
+                log.warn("❌ SSH failed on {} ({}) : {}", user, ip, e.getMessage());
+            }
         }
+
+        return ResponseEntity.status(500).body("❌ SSH failed on all nodes");
     }
+
+
 
 }
