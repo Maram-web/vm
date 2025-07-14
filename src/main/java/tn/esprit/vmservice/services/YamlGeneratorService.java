@@ -29,17 +29,18 @@ spec:
 """.formatted(
                 req.getVmName(),
                 req.getVmName(),
-                getImage(req.getOsType()),
+                getImage(req.getOsType(), req.getUbuntuImageTag()),
                 getCpu(req.getSize()),
                 getMemory(req.getSize())
         );
     }
 
-    private String getImage(String os) {
+    private String getImage(String os, String ubuntuTag) {
         return os.equalsIgnoreCase("ubuntu")
-                ? "marammanai/ubuntu-ssh-kubectl:__UBUNTU_IMAGE_TAG__"
+                ? "marammanai/ubuntu-ssh-kubectl:" + ubuntuTag
                 : "mcr.microsoft.com/windows/nanoserver";
     }
+
 
 
     private String getCpu(String size) {

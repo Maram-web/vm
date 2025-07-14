@@ -12,5 +12,7 @@ public class VmRequest {
     private String size;        // small / medium / large
     private String storageType; // RBD / S3 / CephFS (plus tard)
     private String password;   // ← nouveau champ SSH password
+    private String ubuntuImageTag;
+
 
 }
