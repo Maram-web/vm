@@ -10,7 +10,7 @@ WORKDIR /app
 
 ARG KUBECTL_VERSION=v1.30.1
 
-# Installer kubectl et SSH
+# 📦 Installer kubectl et ssh
 RUN apt-get update && \
     apt-get install -y openssh-client curl && \
     curl -LO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl" && \
