@@ -15,7 +15,20 @@ metadata:
 spec:
   containers:
     - name: %s-container
-      image: %s
+      image: linuxserver/openssh-server
+      env:
+        - name: PUID
+          value: "1000"
+        - name: PGID
+          value: "1000"
+        - name: TZ
+          value: "Europe/Paris"
+        - name: PASSWORD_ACCESS
+          value: "true"
+        - name: USER_PASSWORD
+          value: "root"
+        - name: USER_NAME
+          value: "root"
       resources:
         limits:
           cpu: %s
@@ -29,10 +42,10 @@ spec:
 """.formatted(
                 req.getVmName(),
                 req.getVmName(),
-                getImage(req.getOsType()),
                 getCpu(req.getSize()),
                 getMemory(req.getSize())
         );
+
     }
 
     private String getImage(String os) {
