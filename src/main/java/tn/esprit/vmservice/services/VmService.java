@@ -36,10 +36,12 @@ public class VmService {
         log.info("Début déploiement VM {}", request.getVmName());
 
         Map<String, String> nodeToIp = Map.of(
-                "ceph2", "192.168.13.22",
-                "ceph3", "192.168.13.33",
-                "ceph4", "192.168.13.44"
+                "ceph2-virtual-machine", "192.168.194.129",
+                "ceph3-virtual-machine", "192.168.194.130",
+                "ceph4-virtual-machine", "192.168.194.131",
+                "ceph1-virtual-machine", "192.168.194.128" // ← optionnel, si le master peut exécuter aussi
         );
+
 
         // 0) Persistance
         VmInstance vm = new VmInstance();
