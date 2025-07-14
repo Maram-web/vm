@@ -130,7 +130,7 @@ public class VmController {
 
         try {
             // Supprimer le pod dans K8s
-            String cmd = "kubectl delete pod " + vmName + " -n user";
+            String cmd = "kubectl delete pod " + vmName + " -n vm";
             Process process = Runtime.getRuntime().exec(cmd);
             int exitCode = process.waitFor();
 

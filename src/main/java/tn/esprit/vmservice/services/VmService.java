@@ -75,7 +75,7 @@ public class VmService {
 
 
     public String getNodeHostingPod(String podName) throws Exception {
-        Process process = Runtime.getRuntime().exec("kubectl get pod " + podName + " -n user -o=jsonpath='{.spec.nodeName}'");
+        Process process = Runtime.getRuntime().exec("kubectl get pod " + podName + " -n vm -o=jsonpath='{.spec.nodeName}'");
         process.waitFor();
         return new String(process.getInputStream().readAllBytes()).replace("'", "");
     }

@@ -22,7 +22,7 @@ spec:
     spec:
       containers:
         - name: vm-service
-          image: marammanai/vm-service:v1  # ✅ Remplace avec ta vraie version
+          image: marammanai/vm-service:__IMAGE_TAG__  # ✅ Remplace avec ta vraie version
           imagePullPolicy: Always
           ports:
             - containerPort: 8082
