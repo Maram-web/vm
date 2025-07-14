@@ -16,14 +16,9 @@ pipeline {
             }
         }
 
-        stage('Build Docker Image') {
+        stage('Build & Push vm-service Image') {
             steps {
                 sh "docker build -t $IMAGE_NAME ."
-            }
-        }
-
-        stage('Push to Docker Hub') {
-            steps {
                 withCredentials([usernamePassword(credentialsId: 'docker-hub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
                     sh '''
                         echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
@@ -33,41 +28,40 @@ pipeline {
             }
         }
 
-        stage('Inject Tag into YAML') {
+        stage('Inject vm-service Tag into YAML') {
             steps {
                 sh "sed 's|__IMAGE_TAG__|$IMAGE_TAG|g' k8s-vm-template.yaml > $DEPLOY_YAML"
             }
         }
 
-       stage('Build & Push ubuntu-ssh-kubectl Image') {
-           steps {
-               script {
-                   def TIMESTAMP2 = new Date().format('yyyyMMdd-HHmmss')
-                   def UBUNTU_IMAGE_TAG = "v${TIMESTAMP2}"
-                   def UBUNTU_IMAGE_NAME = "marammanai/ubuntu-ssh-kubectl:${UBUNTU_IMAGE_TAG}"
-                   env.UBUNTU_IMAGE_TAG = UBUNTU_IMAGE_TAG
+        stage('Build & Push ubuntu-ssh-kubectl Image') {
+            steps {
+                script {
+                    def TIMESTAMP2 = new Date().format('yyyyMMdd-HHmmss')
+                    def UBUNTU_IMAGE_TAG = "v${TIMESTAMP2}"
+                    def UBUNTU_IMAGE_NAME = "marammanai/ubuntu-ssh-kubectl:${UBUNTU_IMAGE_TAG}"
+                    env.UBUNTU_IMAGE_TAG = UBUNTU_IMAGE_TAG
 
-                   sh """
-                       cd ubuntu-image
-                       docker build -t ${UBUNTU_IMAGE_NAME} .
-                       docker push ${UBUNTU_IMAGE_NAME}
-                   """
+                    sh """
+                        cd ubuntu-image
+                        docker build -t ${UBUNTU_IMAGE_NAME} .
+                        docker push ${UBUNTU_IMAGE_NAME}
+                    """
 
-                   // ✅ Remplace dans YAML
-                   sh "sed -i 's|__UBUNTU_IMAGE_TAG__|${UBUNTU_IMAGE_TAG}|g' $DEPLOY_YAML"
+                    // ✅ Inject Ubuntu image tag into YAML
+                    sh "sed -i 's|__UBUNTU_IMAGE_TAG__|${UBUNTU_IMAGE_TAG}|g' $DEPLOY_YAML"
 
-                   // ✅ Ajoute la propriété si elle n’existe pas déjà
-                  sh """
-                      if grep -q '^ubuntu.image.tag=' src/main/resources/application.properties; then
-                          sed -i 's|^ubuntu.image.tag=.*|ubuntu.image.tag='${UBUNTU_IMAGE_TAG}'|' src/main/resources/application.properties
-                      else
-                          echo 'ubuntu.image.tag='${UBUNTU_IMAGE_TAG} >> src/main/resources/application.properties
-                      fi
-                  """
-
-               }
-           }
-       }
+                    // ✅ Update or add ubuntu.image.tag in application.properties
+                    sh """
+                        if grep -q '^ubuntu.image.tag=' src/main/resources/application.properties; then
+                            sed -i 's|^ubuntu.image.tag=.*|ubuntu.image.tag=${UBUNTU_IMAGE_TAG}|' src/main/resources/application.properties
+                        else
+                            echo 'ubuntu.image.tag=${UBUNTU_IMAGE_TAG}' >> src/main/resources/application.properties
+                        fi
+                    """
+                }
+            }
+        }
 
         stage('Deploy to Kubernetes') {
             steps {
