@@ -48,7 +48,7 @@ pipeline {
                     env.UBUNTU_IMAGE_TAG = UBUNTU_IMAGE_TAG
 
                     sh """
-                        cd ../ubuntu-image-folder
+                        cd ubuntu-image
                         docker build -t ${UBUNTU_IMAGE_NAME} .
                         docker push ${UBUNTU_IMAGE_NAME}
                     """
